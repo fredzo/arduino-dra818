@@ -50,7 +50,8 @@
 #define SA8X8_UHF_MAX     480.0
 #define DRA818_12K5       0x0
 #define DRA818_25K        0x1
-//#define DRA818_DEBUG
+#define DRA818_DEBUG
+#define DRA818_SIMU
 
 class DRA818 {
     public:

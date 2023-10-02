@@ -27,6 +27,10 @@
 #include <SoftwareSerial.h>
 #endif
 
+#ifdef DRA818_SIMU
+  #include <DRA818Simu.h>
+#endif
+
 #define CTCSS_MAX           38
 #define SQUELCH_MAX         8
 #define VOLUME_MAX          8
@@ -38,19 +42,44 @@
 
 #define CHECK(a, op, b) if (a op b) a = b
 
-#ifdef DRA818_DEBUG
-  #define LOG(action, msg) if (this->log) this->log->action(msg)
-  #define SEND(msg) do {  \
-    this->serial->write(msg); \
-    if (this->log) this->log->write(msg);  \
-    } while(0)
+#ifdef DRA818_SIMU
+  #ifdef DRA818_DEBUG
+    #define LOG(action, msg) if (this->log) this->log->action(msg)
+    #define SEND(msg) ({\
+      dra818SimuWrite(msg); \
+      if (this->log) this->log->write(msg);  \
+      })
+    #define READ() ({int retval; \
+      retval=dra818SimuRead(); \
+      if (this->log) this->log->write(retval);  \
+      retval;})
+  #else
+    #define LOG(action, msg)
+    #define SEND(msg) dra818SimuWrite(msg)
+    #define READ() dra818SimuRead()
+  #endif
+  #define AVAILABLE() dra818SimuAvailable()
 #else
-  #define LOG(action, msg)
-  #define SEND(msg) this->serial->write(msg)
+  #ifdef DRA818_DEBUG
+    #define LOG(action, msg) if (this->log) this->log->action(msg)
+    #define SEND(msg) ({  \
+      this->serial->write(msg); \
+      if (this->log) this->log->write(msg);  \
+      })
+    #define READ() ({int retval; \
+      retval=this->serial->read(); \
+      if (this->log) this->log->write(retval);  \
+      retval;})
+  #else
+    #define LOG(action, msg)
+    #define SEND(msg) this->serial->write(msg)
+    #define READ() this->serial->read()
+  #endif
+  #define AVAILABLE() this->serial->available()
 #endif
 
 DRA818::DRA818(HardwareSerial *serial, uint8_t type) {
-  serial->begin(SERIAL_SPEED, SERIAL_CONFIG);
+  //serial->begin(SERIAL_SPEED, SERIAL_CONFIG);
   this->init((Stream *)serial, type);
 }
 
@@ -64,7 +93,7 @@ DRA818::DRA818(SoftwareSerial *serial, uint8_t type) {
 void DRA818::init(Stream *serial, uint8_t type) {
   this->serial = serial;
 #ifdef DRA818_DEBUG
-  this->log = NULL;
+  this->log = &Serial;
 #endif
   this->type = type;
 }
@@ -85,15 +114,15 @@ int DRA818::read_response() {
   ack[2]=0;
   long start = millis();
   do {
-    if (this->serial->available()) {
+    if (AVAILABLE()) {
       ack[0] = ack[1];
       ack[1] = ack[2];
-      ack[2] = this->serial->read();
+      ack[2] = READ();
       LOG(write, ack[2]);
     }
   } while (ack[2] != 0xa && (millis() - start) < TIMEOUT);
 #ifdef DRA818_DEBUG
-  if (ack[2] != 0xa) LOG(write, F("\r\n"));
+  if (ack[2] != 0xa) LOG(write, "\r\n");
 #endif
   LOG(print, F("Returned value="));
   LOG(println, ack[0] == '0' );
