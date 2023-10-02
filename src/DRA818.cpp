@@ -51,7 +51,7 @@
       })
     #define READ() ({int retval; \
       retval=dra818SimuRead(); \
-      if (this->log) this->log->write(retval);  \
+      /*if (this->log) this->log->write(retval);*/  \
       retval;})
   #else
     #define LOG(action, msg)
@@ -79,7 +79,7 @@
 #endif
 
 DRA818::DRA818(HardwareSerial *serial, uint8_t type) {
-  //serial->begin(SERIAL_SPEED, SERIAL_CONFIG);
+  serial->begin(SERIAL_SPEED, SERIAL_CONFIG);
   this->init((Stream *)serial, type);
 }
 

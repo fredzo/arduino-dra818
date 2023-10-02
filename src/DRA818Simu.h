@@ -101,6 +101,7 @@ char dra818SimuRead()
     // No response before the delay
     if(millis()-commandTime<RESPONSE_DELAY) return 0;
     char result = responseBuffer[responseBufferIndex];
+    responseBufferIndex++;
     if(result == 0x0a)
     {   // End of command
         responseAvailable = false;
