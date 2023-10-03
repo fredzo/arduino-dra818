@@ -10,6 +10,7 @@ unsigned long commandTime;
 char responseBuffer[64];
 int responseBufferIndex = 0;
 bool responseAvailable = false;
+int rssiValues[] = {0,32,64,96,128,160,192,224,255};
 
 
 void dra818SimuSetAsync(bool asyncMode)
@@ -42,7 +43,8 @@ void dra818SimuWrite(char character)
         }
         else if (commandString.startsWith("RSSI?"))
         {
-            strcpy(responseBuffer,"RSSI:010\r\n");
+            int rssi = rssiValues[random(8)];
+            sprintf(responseBuffer,"RSSI:%03d\r\n",rssi);
         }
         else if (commandString.startsWith("AT+SETFILTER"))
         {

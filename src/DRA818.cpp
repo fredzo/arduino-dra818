@@ -237,7 +237,15 @@ int DRA818::rssi() {
 
   SEND("RSSI?\r\n");
 
-  return read_response();
+  String rssiString = read_string_response();
+  int result = 0;
+  bool prefixMatch = rssiString.startsWith(RSP_RSSI);
+  if(prefixMatch)
+  {
+    rssiString = rssiString.substring(strlen(RSP_RSSI));
+    result = atoi(rssiString.c_str());
+  }
+  return result;
 }
 
 String DRA818::version() {
