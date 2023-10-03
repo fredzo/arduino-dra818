@@ -66,6 +66,7 @@ void dra818SimuWrite(char character)
         }
         responseAvailable = true;
         responseBufferIndex = 0;
+        commandBufferIndex = 0;
     }
     else
     {

@@ -235,7 +235,7 @@ int DRA818::rssi() {
   LOG(println, F("DRA818::rssi"));
   LOG(print, F("-> "));
 
-  SEND("RSSI?");
+  SEND("RSSI?\r\n");
 
   return read_response();
 }
@@ -249,7 +249,7 @@ String DRA818::version() {
   LOG(println, F("DRA818::version"));
   LOG(print, F("-> "));
 
-  SEND("AT+VERSION");
+  SEND("AT+VERSION\r\n");
 
   String response = read_string_response();
   bool prefixMatch = response.startsWith(RSP_VERSION);
