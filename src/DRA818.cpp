@@ -79,22 +79,23 @@
 #endif
 
 DRA818::DRA818(HardwareSerial *serial, uint8_t type) {
+#ifndef DRA818_SIMU
   serial->begin(SERIAL_SPEED, SERIAL_CONFIG);
+#endif
   this->init((Stream *)serial, type);
 }
 
 #if !defined (ESP32)
 DRA818::DRA818(SoftwareSerial *serial, uint8_t type) {
+#ifndef DRA818_SIMU
   serial->begin(SERIAL_SPEED); // We can't configure bits/parity for SoftwareSerial, it's 8N1 as the DRA818
+#endif
   this->init((Stream *)serial, type);
 }
 #endif
 
 void DRA818::init(Stream *serial, uint8_t type) {
   this->serial = serial;
-#ifdef DRA818_DEBUG
-  this->log = &Serial;
-#endif
   this->type = type;
 }
 
