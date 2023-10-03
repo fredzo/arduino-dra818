@@ -69,6 +69,7 @@ class DRA818 {
         int volume(uint8_t volume);
         int filters(bool pre, bool high, bool low);
         int rssi();
+        String version();
 
 
         // serial connection to DRA818
@@ -90,6 +91,8 @@ class DRA818 {
         uint8_t type;
 
         int read_response();
+
+        String read_string_response();
 
         static DRA818* configure(DRA818 *dra, float freq_rx, float freq_tx, uint8_t squelch, uint8_t volume, uint8_t ctcss_rx, uint8_t ctcss_tx, uint8_t bandwidth, bool pre, bool high, bool low, Stream *log = NULL);
 };
