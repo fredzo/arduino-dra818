@@ -237,9 +237,17 @@ int DRA818::rssi() {
   LOG(println, F("DRA818::rssi"));
   LOG(print, F("-> "));
 
-  SEND("RSSI?");
+  SEND("RSSI?\r\n");
 
-  return read_response();
+  String rssiString = read_string_response();
+  int result = 0;
+  bool prefixMatch = rssiString.startsWith(RSP_RSSI);
+  if(prefixMatch)
+  {
+    rssiString = rssiString.substring(strlen(RSP_RSSI));
+    result = atoi(rssiString.c_str());
+  }
+  return result;
 }
 
 String DRA818::version() {
@@ -251,7 +259,7 @@ String DRA818::version() {
   LOG(println, F("DRA818::version"));
   LOG(print, F("-> "));
 
-  SEND("AT+VERSION");
+  SEND("AT+VERSION\r\n");
 
   String response = read_string_response();
   bool prefixMatch = response.startsWith(RSP_VERSION);
