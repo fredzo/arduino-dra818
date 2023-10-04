@@ -41,8 +41,10 @@
 #define SERIAL_CONFIG       SERIAL_8N1
 
 // Commands / responses
+#define RSP_BUFFER_SIZE     64
 #define RSP_VERSION         "+VERSION:"
 #define RSP_RSSI            "RSSI:"
+#define RSP_READ_GROUP      "+DMOREADGROUP:"
 
 #define CHECK(a, op, b) if (a op b) a = b
 
@@ -136,7 +138,7 @@ int DRA818::read_response() {
 }
 
 String DRA818::read_string_response() {
-  char buffer[64];
+  char buffer[RSP_BUFFER_SIZE];
   int bufferIndex = 0;
   char curChar;
 
@@ -150,7 +152,7 @@ String DRA818::read_string_response() {
       LOG(write, curChar);
       bufferIndex++;
     }
-  } while (curChar != 0xa && (millis() - start) < TIMEOUT);
+  } while ((curChar != 0xa) && ((millis() - start) < TIMEOUT) && (bufferIndex<RSP_BUFFER_SIZE));
 #ifdef DRA818_DEBUG
   if (curChar != 0xa) LOG(write, "\r\n");
 #endif
@@ -258,6 +260,27 @@ String DRA818::version() {
     response = response.substring(strlen(RSP_VERSION));
   }
   return response;
+}
+
+DRA818::Parameters DRA818::read_group() {
+  if ((this->type & SA_MODEL_FLAG) == 0){
+    LOG(println, F("WARNING: DRA818::read_group() only supported by SA818/SA868, not by DRA818."));
+    LOG(println, F("Construct your DRA818 object with `type = SA[818]868_[VU]HF` to enable rssi()."));
+    return Parameters();
+  }
+  LOG(println, F("DRA818::version"));
+  LOG(print, F("-> "));
+
+  SEND("AT+VERSION");
+
+  String response = read_string_response();
+  Parameters result;
+  bool prefixMatch = response.startsWith(RSP_VERSION);
+  if(prefixMatch)
+  {
+    response = response.substring(strlen(RSP_VERSION));
+  }
+  return result;
 }
 
 int DRA818::volume(uint8_t volume) {

@@ -54,7 +54,19 @@
 #define DRA818_SIMU
 
 class DRA818 {
+
     public:
+        // Parameters subclass
+        class Parameters {
+            public :
+                uint8_t bandwidth;
+                float freq_tx;
+                float freq_rx;
+                uint8_t ctcss_tx;
+                uint8_t squelch;
+                uint8_t ctcss_rx;
+        };
+
         // Constructors
         DRA818(HardwareSerial *serial, uint8_t type);
 #if !defined (ESP32)
@@ -70,7 +82,7 @@ class DRA818 {
         int filters(bool pre, bool high, bool low);
         int rssi();
         String version();
-
+        Parameters read_group();
 
         // serial connection to DRA818
         Stream *serial;
