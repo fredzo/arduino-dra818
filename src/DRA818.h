@@ -53,6 +53,8 @@
 #define DRA818_DEBUG
 #define DRA818_SIMU
 
+#define RSP_BUFFER_SIZE   64
+
 class DRA818 {
 
     public:
@@ -62,9 +64,9 @@ class DRA818 {
                 uint8_t bandwidth = 0;
                 float freq_tx = 0;
                 float freq_rx = 0;
-                uint16_t ctcss_tx = 0;
+                uint8_t ctcss_tx = 0;
                 uint8_t squelch = 0;
-                uint16_t ctcss_rx = 0;
+                uint8_t ctcss_rx = 0;
                 String toString();
         };
 
@@ -86,6 +88,29 @@ class DRA818 {
         String version();
         Parameters read_group();
 
+        // Async methods
+        void group_async(uint8_t bandwidth, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx);
+        void group_async_cb(void(*cb)(int));
+        void handshake_async();
+        void handshake_async_cb(void(*cb)(int));
+        void scan_async(float freq);
+        void scan_async_cb(void(*cb)(int));
+        void volume_async(uint8_t volume);
+        void volume_async_cb(void(*cb)(int));
+        void filters_async(bool pre, bool high, bool low);
+        void filters_async_cb(void(*cb)(int));
+        void tail_async(bool tail);
+        void tail_async_cb(void(*cb)(int));
+        void rssi_async();
+        void rssi_async_cb(void(*cb)(int));
+        void version_async();
+        void version_async_cb(void(*cb)(String));
+        void read_group_async();
+        void read_group_async_cb(void(*cb)(Parameters));
+
+        // Asynck task processing method
+        void async_task();
+
         // serial connection to DRA818
         Stream *serial;
 
@@ -106,6 +131,20 @@ class DRA818 {
 
     private:
         uint8_t type;
+
+        // Async callbacks
+        void (*group_cb)(int) = NULL;
+        void (*handshake_cb)(int) = NULL;
+        void (*scan_cb)(int) = NULL;
+        void (*volume_cb)(int) = NULL;
+        void (*filters_cb)(int) = NULL;
+        void (*tail_cb)(int) = NULL;
+        void (*rssi_cb)(int) = NULL;
+        void (*version_cb)(String) = NULL;
+        void (*read_group_cb)(Parameters) = NULL;
+        // Reponse buffer for async mode
+        char responseBuffer[RSP_BUFFER_SIZE];
+        int responseBufferIndex = 0;
 
         // low level DRA818 function
         bool send_group(uint8_t bandwidth, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx);

@@ -41,7 +41,6 @@
 #define SERIAL_CONFIG       SERIAL_8N1
 
 // Commands / responses
-#define RSP_BUFFER_SIZE     64
 #define RSP_VERSION         "+VERSION:"
 #define RSP_RSSI            "RSSI:"
 #define RSP_READ_GROUP      "+DMOREADGROUP:"
@@ -442,6 +441,169 @@ DRA818::Parameters DRA818::parseParameters(String parameterString)
     }
   }
   return result;
+}
+
+// Async methods
+void DRA818::group_async(uint8_t bandwidth, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx) {
+  send_group(bandwidth, freq_tx, freq_rx, ctcss_tx, squelch, ctcss_rx);
+}
+
+void DRA818::group_async_cb(void(*cb)(int)) {
+  group_cb = cb;
+}
+
+void DRA818::handshake_async() {
+  send_handshake();
+}
+
+void DRA818::handshake_async_cb(void(*cb)(int)) {
+  handshake_cb = cb;
+}
+
+void DRA818::scan_async(float freq) {
+  send_scan(freq);
+}
+
+void DRA818::scan_async_cb(void(*cb)(int)) {
+  scan_cb = cb;
+}
+
+void DRA818::volume_async(uint8_t volume) {
+  send_volume(volume);
+}
+
+void DRA818::volume_async_cb(void(*cb)(int)) {
+   volume_cb = cb;
+}
+
+void DRA818::filters_async(bool pre, bool high, bool low) {
+  send_filters(pre,high,low);
+}
+
+void DRA818::filters_async_cb(void(*cb)(int)) {
+  filters_cb = cb;
+}
+
+void DRA818::tail_async(bool tail) {
+  send_tail(tail);
+}
+
+void DRA818::tail_async_cb(void(*cb)(int)) {
+  tail_cb = cb;
+}
+
+void DRA818::rssi_async() {
+  send_rssi();
+}
+
+void DRA818::rssi_async_cb(void(*cb)(int)) {
+  rssi_cb = cb;
+}
+
+void DRA818::version_async() {
+  send_version();
+}
+
+void DRA818::version_async_cb(void(*cb)(String)) {
+  version_cb = cb;
+}
+
+void DRA818::read_group_async() {
+  send_read_group();
+}
+ 
+void DRA818::read_group_async_cb(void(*cb)(Parameters)) {
+  read_group_cb = cb;
+}
+
+void DRA818::async_task()
+{ // Check for DRA module presponse
+  while(AVAILABLE()) {
+    char curChar = READ();
+    responseBuffer[responseBufferIndex] = curChar;
+    LOG(write, curChar);
+    responseBufferIndex++;
+    if(responseBufferIndex>=RSP_BUFFER_SIZE) {
+      // Buffer full => overwrite last char 
+      responseBufferIndex = RSP_BUFFER_SIZE-1;
+      LOG(println, "Buffer full !");
+    }
+    if(curChar == 0x0a)
+    { // Process command
+      #ifdef DRA818_DEBUG
+      LOG(write, "\r\n");
+      #endif
+      responseBuffer[responseBufferIndex] = 0; // String termination
+      String responseString = String(responseBuffer);
+      if(responseString.startsWith("+DMOCONNECT:"))
+      { // handshake
+        if(handshake_cb) {
+          (*handshake_cb)(responseString.charAt(12) == '0');
+        }
+      }
+      else if (responseString.startsWith("S="))
+      { // Scan
+        if(scan_cb) {
+          (*scan_cb)(responseString.charAt(2) == '0');
+        }
+      }
+      else if (responseString.startsWith("+DMOSETGROUP:"))
+      {
+        if(group_cb) {
+          (*group_cb)(responseString.charAt(13) == '0');
+        }
+      }
+      else if (responseString.startsWith("+DMOSETVOLUME:"))
+      {
+        if(volume_cb) {
+          (*volume_cb)(responseString.charAt(14) == '0');
+        }
+      }
+      else if (responseString.startsWith("RSSI:"))
+      {
+        if(rssi_cb) {
+          // Parse RSSI value
+          responseString = responseString.substring(5);
+          (*rssi_cb)(atoi(responseString.c_str()));
+        }
+      }
+      else if (responseString.startsWith("+DMOSETFILTER:"))
+      {
+        if(filters_cb) {
+          (*filters_cb)(responseString.charAt(14) == '0');
+        }
+      }
+      else if (responseString.startsWith("+DMOSETTAIL:"))
+      {
+        if(tail_cb) {
+          (*tail_cb)(responseString.charAt(12) == '0');
+        }
+      }
+      else if (responseString.startsWith("+DMOREADGROUP:"))
+      {
+        if(read_group_cb) {
+          // Parse RSSI value
+          responseString = responseString.substring(14);
+          (*read_group_cb)(parseParameters(responseString));
+        }
+      }
+      else if (responseString.startsWith("+VERSION:"))
+      {
+        if(version_cb) {
+          // Parse RSSI value
+          responseString = responseString.substring(9);
+          (*version_cb)(responseString);
+        }
+      }
+      else
+      {
+        LOG(print, F("Unknown response '"));
+        LOG(print, responseString.c_str());
+        LOG(println, F("'"));
+      }
+      responseBufferIndex = 0;
+    }
+  }
 }
 
 
