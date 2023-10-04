@@ -279,7 +279,7 @@ DRA818::Parameters DRA818::read_group() {
   LOG(println, F("DRA818::version"));
   LOG(print, F("-> "));
 
-  SEND("AT+VERSION");
+  SEND("AT+DMOREADGROUP\r\n");
 
   String response = read_string_response();
   Parameters result;
@@ -287,6 +287,17 @@ DRA818::Parameters DRA818::read_group() {
   if(prefixMatch)
   {
     response = response.substring(strlen(RSP_VERSION));
+    char* token = strtok((char*)response.c_str(),",");
+    if(token != 0)
+    { // GBW
+      result.bandwidth = atof(token);
+      token = strtok(0,",");
+      if(token != 0)
+      { //
+
+      }
+    }
+
   }
   return result;
 }
