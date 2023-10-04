@@ -163,6 +163,10 @@ String DRA818::read_string_response() {
   return result;
 }
 
+int DRA818::group(Parameters parameters) {
+  send_group(parameters.bandwidth, parameters.freq_tx, parameters.freq_rx, parameters.ctcss_tx, parameters.squelch, parameters.ctcss_rx);
+  return this->read_response();
+}
 
 int DRA818::group(uint8_t bw, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx) {
   send_group(bw, freq_tx, freq_rx, ctcss_tx, squelch, ctcss_rx);
@@ -444,6 +448,10 @@ DRA818::Parameters DRA818::parseParameters(String parameterString)
 }
 
 // Async methods
+void DRA818::group_async(Parameters parameters) {
+  send_group(parameters.bandwidth, parameters.freq_tx, parameters.freq_rx, parameters.ctcss_tx, parameters.squelch, parameters.ctcss_rx);
+}
+
 void DRA818::group_async(uint8_t bandwidth, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx) {
   send_group(bandwidth, freq_tx, freq_rx, ctcss_tx, squelch, ctcss_rx);
 }

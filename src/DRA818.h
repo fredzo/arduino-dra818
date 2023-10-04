@@ -85,6 +85,7 @@ class DRA818 {
         void init(Stream *serial, uint8_t type);
 
         // low level DRA818 function
+        int group(Parameters parameters);
         int group(uint8_t bandwidth, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx);
         int handshake();
         int scan(float freq);
@@ -96,6 +97,7 @@ class DRA818 {
         Parameters read_group();
 
         // Async methods
+        void group_async(Parameters parameters);
         void group_async(uint8_t bandwidth, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx);
         void group_async_cb(void(*cb)(int));
         void handshake_async();
