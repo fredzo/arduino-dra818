@@ -1,7 +1,12 @@
 #ifndef DRA818_SIMU_h
 #define DRA818_SIMU_h
 
-#define RESPONSE_DELAY   300 // Simulate a 300ms response time from the DRA module
+#include <DRA818.h>
+
+#define RESPONSE_DELAY      300 // Simulate a 300ms response time from the DRA module
+
+#define COMMAND_SET_GROUP   "AT+DMOSETGROUP="
+#define COMMAND_SCAN        "S+"
 
 static bool async = false;
 char commandBuffer[64];
@@ -11,7 +16,9 @@ char responseBuffer[64];
 int responseBufferIndex = 0;
 bool responseAvailable = false;
 int rssiValues[] = {0,32,64,96,128,160,192,224,255};
-
+DRA818::Parameters parameters;
+float busyFrequencies[] = {433.0,406.025,406.037,406.049};
+#define BUSYS_FREQ_NUMBER 4
 
 void dra818SimuSetAsync(bool asyncMode)
 {
@@ -29,12 +36,26 @@ void dra818SimuWrite(char character)
         {
             strcpy(responseBuffer,"+DMOCONNECT:0\r\n");
         }
-        else if (commandString.startsWith("S+"))
-        {   // TODO change from 0 to 1 according to frequency
-            strcpy(responseBuffer,"S=0\r\n");
-        }
-        else if (commandString.startsWith("AT+DMOSETGROUP"))
+        else if (commandString.startsWith(COMMAND_SCAN))
         {
+            commandString = commandString.substring(strlen(COMMAND_SCAN));
+            // Parse frequency value
+            float frequency = atof(commandString.c_str());
+            bool busy = false;
+            for(int i = 0 ; i < BUSYS_FREQ_NUMBER ; i++)
+            {
+                if(frequency == busyFrequencies[i])
+                {
+                    busy = true;
+                    break;
+                }
+            }
+            sprintf(responseBuffer,"S=%d\r\n", busy ? 0 : 1);
+        }
+        else if (commandString.startsWith(COMMAND_SET_GROUP))
+        {
+            commandString = commandString.substring(strlen(COMMAND_SET_GROUP));
+            parameters = DRA818::parseParameters(commandString);
             strcpy(responseBuffer,"+DMOSETGROUP:0\r\n");
         }
         else if (commandString.startsWith("AT+DMOSETVOLUME"))
@@ -56,7 +77,7 @@ void dra818SimuWrite(char character)
         }
         else if (commandString.startsWith("AT+DMOREADGROUP"))
         {
-            strcpy(responseBuffer,"+DMOREADGROUP:0,433.5000,433.5000,0123,3,0456\r\n");
+            sprintf(responseBuffer,"+DMOREADGROUP:%d,%3.4f,%3.4f,%03d,%d,%03d\r\n",parameters.bandwidth,parameters.freq_tx,parameters.freq_rx,parameters.ctcss_tx,parameters.squelch,parameters.ctcss_rx);
         }
         else if (commandString.startsWith("AT+VERSION"))
         {
