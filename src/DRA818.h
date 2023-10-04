@@ -81,6 +81,7 @@ class DRA818 {
         int scan(float freq);
         int volume(uint8_t volume);
         int filters(bool pre, bool high, bool low);
+        int tail(bool tail);
         int rssi();
         String version();
         Parameters read_group();
@@ -93,6 +94,9 @@ class DRA818 {
         void set_log(Stream *log);
         Stream *log;
 #endif
+        // Utility method to parse parameters
+        static Parameters parseParameters(String parameterString);
+
 
         // all-in-one configuration functions
 #if !defined (ESP32)
@@ -102,6 +106,18 @@ class DRA818 {
 
     private:
         uint8_t type;
+
+        // low level DRA818 function
+        bool send_group(uint8_t bandwidth, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx);
+        bool send_handshake();
+        bool send_scan(float freq);
+        bool send_volume(uint8_t volume);
+        bool send_filters(bool pre, bool high, bool low);
+        bool send_tail(bool tail);
+        bool send_rssi();
+        bool send_version();
+        bool send_read_group();
+
 
         int read_response();
 

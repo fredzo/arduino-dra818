@@ -166,6 +166,107 @@ String DRA818::read_string_response() {
 
 
 int DRA818::group(uint8_t bw, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx) {
+  send_group(bw, freq_tx, freq_rx, ctcss_tx, squelch, ctcss_rx);
+  return this->read_response();
+}
+
+int DRA818::handshake() {
+  char i = HANDSHAKE_REPEAT;
+  while (i-- > 0) {
+    send_handshake();
+    if (this->read_response()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+int DRA818::scan(float freq) {
+  send_scan(freq);
+  return read_response();
+}
+
+int DRA818::tail(bool tail) {
+  if(send_tail(tail))
+  {
+    return read_response();
+  }
+  else
+  {
+    return -1;
+  }
+}
+
+
+int DRA818::rssi() {
+  if(send_rssi())
+  {
+    String rssiString = read_string_response();
+    int result = 0;
+    bool prefixMatch = rssiString.startsWith(RSP_RSSI);
+    if(prefixMatch)
+    {
+      rssiString = rssiString.substring(strlen(RSP_RSSI));
+      result = atoi(rssiString.c_str());
+    }
+    return result;
+  }
+  else
+  {
+    return -1;
+  }
+}
+
+String DRA818::version() {
+  if(send_version())
+  {
+    String response = read_string_response();
+    bool prefixMatch = response.startsWith(RSP_VERSION);
+    if(prefixMatch)
+    {
+      response = response.substring(strlen(RSP_VERSION));
+    }
+    return response;
+  }
+  else
+  {
+    return String();
+  }
+}
+
+DRA818::Parameters DRA818::read_group() {
+  Parameters result;
+  if(send_read_group())
+  {
+    String response = read_string_response();
+    bool prefixMatch = response.startsWith(RSP_READ_GROUP);
+    if(prefixMatch)
+    {
+      response = response.substring(strlen(RSP_READ_GROUP));
+      result = parseParameters(response);
+    }
+  }
+  return result;
+}
+
+String DRA818::Parameters::toString()
+{
+  char buffer[128];
+  sprintf(buffer, "Parametrs[GBW=%d,TFV=%3.4fMHz,RFV=%3.4fMHz,SQ=%d,Tx_CXCSS=%03d,Rx_CXCSS=%03d]",this->bandwidth,this->freq_tx,this->freq_rx,this->squelch,this->ctcss_tx,this->ctcss_rx);
+  return String(buffer);
+}
+
+int DRA818::volume(uint8_t volume) {
+  send_volume(volume);
+  return read_response();
+}
+
+int DRA818::filters(bool pre, bool high, bool low) {
+  send_filters(pre, high, low);
+  return read_response(); // SCAN function return 0 if there is a signal, 1 otherwise
+}
+
+bool DRA818::send_group(uint8_t bw, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx) {
   char buffer[49];
   char buf_rx[9];
   char buf_tx[9];
@@ -192,28 +293,18 @@ int DRA818::group(uint8_t bw, float freq_tx, float freq_rx, uint8_t ctcss_tx, ui
   LOG(println, F("DRA818::group"));
   LOG(print, F("-> "));
   SEND(buffer);
-
-  return this->read_response();
+  return true;
 }
 
-int DRA818::handshake() {
-  char i = HANDSHAKE_REPEAT;
-
-
-  while (i-- > 0) {
+bool DRA818::send_handshake() {
     LOG(println, F("DRA818::handshake"));
     LOG(print, F("-> "));
 
     SEND("AT+DMOCONNECT\r\n");
-    if (this->read_response()) {
-      return true;
-    }
-  }
-
-  return false;
+    return true;
 }
 
-int DRA818::scan(float freq) {
+bool DRA818::send_scan(float freq) {
   char buf[9];
 
   dtostrf(freq, 8, 4, buf);
@@ -224,118 +315,65 @@ int DRA818::scan(float freq) {
   SEND("S+");
   SEND(buf);
   SEND("\r\n");
-
-  return read_response();
+  return true;
 }
 
-int DRA818::rssi() {
+bool DRA818::send_tail(bool tail) {
+  if ((this->type & SA_MODEL_FLAG) == 0){
+    LOG(println, F("WARNING: DRA818::tail() only supported by SA818/SA868, not by DRA818."));
+    LOG(println, F("Construct your DRA818 object with `type = SA[818]868_[VU]HF` to enable tail()."));
+    return false;
+  }
+  LOG(println, F("DRA818::tail"));
+  LOG(print, F("-> "));
+
+  SEND("AT+SETTAIL=");
+  SEND('0' + (char)(tail ? true: false));
+  SEND("\r\n");
+  return true;
+}
+
+
+bool DRA818::send_rssi() {
   if ((this->type & SA_MODEL_FLAG) == 0){
     LOG(println, F("WARNING: DRA818::rssi() only supported by SA818/SA868, not by DRA818."));
     LOG(println, F("Construct your DRA818 object with `type = SA[818]868_[VU]HF` to enable rssi()."));
-    return -1;
+    return false;
   }
   LOG(println, F("DRA818::rssi"));
   LOG(print, F("-> "));
 
   SEND("RSSI?\r\n");
-
-  String rssiString = read_string_response();
-  int result = 0;
-  bool prefixMatch = rssiString.startsWith(RSP_RSSI);
-  if(prefixMatch)
-  {
-    rssiString = rssiString.substring(strlen(RSP_RSSI));
-    result = atoi(rssiString.c_str());
-  }
-  return result;
+  return true;
 }
 
-String DRA818::version() {
+bool DRA818::send_version() {
   if ((this->type & SA_MODEL_FLAG) == 0){
     LOG(println, F("WARNING: DRA818::version() only supported by SA818/SA868, not by DRA818."));
-    LOG(println, F("Construct your DRA818 object with `type = SA[818]868_[VU]HF` to enable rssi()."));
+    LOG(println, F("Construct your DRA818 object with `type = SA[818]868_[VU]HF` to enable version()."));
     return String();
   }
   LOG(println, F("DRA818::version"));
   LOG(print, F("-> "));
 
   SEND("AT+VERSION\r\n");
-
-  String response = read_string_response();
-  bool prefixMatch = response.startsWith(RSP_VERSION);
-  if(prefixMatch)
-  {
-    response = response.substring(strlen(RSP_VERSION));
-  }
-  return response;
+  return true;
 }
 
-DRA818::Parameters DRA818::read_group() {
+bool DRA818::send_read_group() {
   if ((this->type & SA_MODEL_FLAG) == 0){
     LOG(println, F("WARNING: DRA818::read_group() only supported by SA818/SA868, not by DRA818."));
-    LOG(println, F("Construct your DRA818 object with `type = SA[818]868_[VU]HF` to enable rssi()."));
-    return Parameters();
+    LOG(println, F("Construct your DRA818 object with `type = SA[818]868_[VU]HF` to enable read_group()."));
+    return false;
   }
-  LOG(println, F("DRA818::version"));
+  LOG(println, F("DRA818::read_group"));
   LOG(print, F("-> "));
 
   SEND("AT+DMOREADGROUP\r\n");
-
-  String response = read_string_response();
-  Parameters result;
-  bool prefixMatch = response.startsWith(RSP_READ_GROUP);
-  if(prefixMatch)
-  {
-    response = response.substring(strlen(RSP_READ_GROUP));
-    char* token = strtok((char*)response.c_str(),",");
-    if(token != 0)
-    { // GBW
-      //Serial.printf("GBW : %s",token);
-      result.bandwidth = atoi(token);
-      token = strtok(0,",");
-      if(token != 0)
-      { // TFV
-        //Serial.printf("TFV : %s",token);
-        result.freq_tx = atof(token);
-        token = strtok(0,",");
-        if(token != 0)
-        { // RFV
-          //Serial.printf("RFV : %s",token);
-          result.freq_rx = atof(token);
-          token = strtok(0,",");
-          if(token != 0)
-          { // Tx_CXCSS
-            //Serial.printf("Tx CXCSS : %s",token);
-            result.ctcss_tx = atoi(token);
-            token = strtok(0,",");
-            if(token != 0)
-            { // SQ
-              //Serial.printf("SQ : %s",token);
-              result.squelch = atoi(token);
-              token = strtok(0,",");
-              if(token != 0)
-              { // Rx_CXCSS
-                //Serial.printf("Rx CXCSS : %s",token);
-                result.ctcss_rx = atoi(token);
-                token = strtok(0,",");
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return result;
+  return true;
 }
 
-String DRA818::Parameters::toString()
-{
-  char buffer[128];
-  sprintf(buffer, "Parametrs[GBW=%d,TFV=%3.4fMHz,RFV=%3.4fMHz,SQ=%d,Tx_CXCSS=%03d,Rx_CXCSS=%03d]",this->bandwidth,this->freq_tx,this->freq_rx,this->squelch,this->ctcss_tx,this->ctcss_rx);
-  return String(buffer);
-}
-
-int DRA818::volume(uint8_t volume) {
+bool DRA818::send_volume(uint8_t volume) {
   CHECK(volume, >, VOLUME_MAX);
   CHECK(volume, <, VOLUME_MIN);
 
@@ -345,11 +383,10 @@ int DRA818::volume(uint8_t volume) {
   SEND("AT+DMOSETVOLUME=");
   SEND(volume + '0');
   SEND("\r\n");
-
-  return read_response();
+  return true;
 }
 
-int DRA818::filters(bool pre, bool high, bool low) {
+bool DRA818::send_filters(bool pre, bool high, bool low) {
   LOG(println, F("DRA818::filters"));
   LOG(print, F("-> "));
 
@@ -361,8 +398,52 @@ int DRA818::filters(bool pre, bool high, bool low) {
   SEND('0' + (char)(low ? false: true)); // or !low
   SEND("\r\n");
 
-  return read_response(); // SCAN function return 0 if there is a signal, 1 otherwise
+  return true;
 }
+
+DRA818::Parameters DRA818::parseParameters(String parameterString)
+{
+  Parameters result;
+  char* token = strtok((char*)parameterString.c_str(),",");
+  if(token != 0)
+  { // GBW
+    //Serial.printf("GBW : %s",token);
+    result.bandwidth = atoi(token);
+    token = strtok(0,",");
+    if(token != 0)
+    { // TFV
+      //Serial.printf("TFV : %s",token);
+      result.freq_tx = atof(token);
+      token = strtok(0,",");
+      if(token != 0)
+      { // RFV
+        //Serial.printf("RFV : %s",token);
+        result.freq_rx = atof(token);
+        token = strtok(0,",");
+        if(token != 0)
+        { // Tx_CXCSS
+          //Serial.printf("Tx CXCSS : %s",token);
+          result.ctcss_tx = atoi(token);
+          token = strtok(0,",");
+          if(token != 0)
+          { // SQ
+            //Serial.printf("SQ : %s",token);
+            result.squelch = atoi(token);
+            token = strtok(0,",");
+            if(token != 0)
+            { // Rx_CXCSS
+              //Serial.printf("Rx CXCSS : %s",token);
+              result.ctcss_rx = atoi(token);
+              token = strtok(0,",");
+            }
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
 
 #if !defined (ESP32)
 DRA818* DRA818::configure(SoftwareSerial *stream, uint8_t type, float freq_rx, float freq_tx, uint8_t squelch, uint8_t volume, uint8_t ctcss_rx, uint8_t ctcss_tx, uint8_t bandwidth, bool pre, bool high, bool low, Stream *log) {
