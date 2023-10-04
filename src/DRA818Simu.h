@@ -8,28 +8,27 @@
 #define COMMAND_SET_GROUP   "AT+DMOSETGROUP="
 #define COMMAND_SCAN        "S+"
 
-static bool async = false;
+#define RESPONSE_STACK_SIZE  16
+
 char commandBuffer[64];
 int commandBufferIndex = 0;
 unsigned long commandTime;
-char responseBuffer[64];
+char responseStack[RESPONSE_STACK_SIZE][64];
+int responseStackWriteIndex = 0;
+int responsetackReadIndex = 0;
+char* responseBuffer = NULL;
 int responseBufferIndex = 0;
-bool responseAvailable = false;
 int rssiValues[] = {0,32,64,96,128,160,192,224,255};
 DRA818::Parameters parameters;
 float busyFrequencies[] = {433.0,406.025,406.037,406.049};
 #define BUSYS_FREQ_NUMBER 4
-
-void dra818SimuSetAsync(bool asyncMode)
-{
-    async = asyncMode;
-}
 
 void dra818SimuWrite(char character)
 {
     if(character == 0x0a)
     {   // Process command
         commandBuffer[commandBufferIndex] = 0; // String termination
+        char* responseBuffer = responseStack[responseStackWriteIndex];
         String commandString = String(commandBuffer);
         commandTime = millis();
         if(commandString.startsWith("AT+DMOCONNECT"))
@@ -87,9 +86,9 @@ void dra818SimuWrite(char character)
         {
             strcpy(responseBuffer,"+ERROR:1\r\n");
         }
-        responseAvailable = true;
-        responseBufferIndex = 0;
         commandBufferIndex = 0;
+        responseStackWriteIndex++;
+        if(responseStackWriteIndex >= RESPONSE_STACK_SIZE) responseStackWriteIndex = 0; // Circular stack
     }
     else
     {
@@ -108,11 +107,12 @@ void dra818SimuWrite(const char* buffer)
 }
 
 bool dra818SimuAvailable()
-{
-    if(!responseAvailable) return false;
+{   // No response before the delay
     if(millis()-commandTime<RESPONSE_DELAY) return false;
+    // Noting to read
+    if((responsetackReadIndex == responseStackWriteIndex) && (responseBuffer == NULL)) return false;
     return true;
-}
+ }
 
 void dra818SimuTask()
 {
@@ -120,15 +120,20 @@ void dra818SimuTask()
 }
 
 char dra818SimuRead()
-{   // Noting to read
-    if(!responseAvailable) return 0;
-    // No response before the delay
-    if(millis()-commandTime<RESPONSE_DELAY) return 0;
+{   
+    if(!dra818SimuAvailable()) return 0;
+    if(responseBuffer == NULL)
+    {   // Start a new response
+        responseBuffer = responseStack[responsetackReadIndex];
+        responsetackReadIndex++;
+        if(responsetackReadIndex >= RESPONSE_STACK_SIZE) responsetackReadIndex = 0; // Circular stack
+    }
     char result = responseBuffer[responseBufferIndex];
     responseBufferIndex++;
     if(result == 0x0a)
     {   // End of command
-        responseAvailable = false;
+        responseBuffer = NULL;
+        responseBufferIndex = 0;
     }
     return result;
 }

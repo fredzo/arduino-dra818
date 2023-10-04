@@ -27,6 +27,13 @@
 #include <SoftwareSerial.h>
 #endif
 
+// Return codes
+#define DRA818_RET_OK     1
+#define DRA818_RET_KO     0
+// Return codes for scan command
+#define DRA818_SCAN_SIGNAL      1
+#define DRA818_SCAN_NO_SIGNAL   0
+
 // Which bit of `type` to look at to determine the band
 #define DRA818_BAND_FLAG  0x1
 // Which bit of `type` to look at to determin whether it's an 818 or an 868
