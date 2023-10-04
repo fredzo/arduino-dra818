@@ -283,23 +283,56 @@ DRA818::Parameters DRA818::read_group() {
 
   String response = read_string_response();
   Parameters result;
-  bool prefixMatch = response.startsWith(RSP_VERSION);
+  bool prefixMatch = response.startsWith(RSP_READ_GROUP);
   if(prefixMatch)
   {
-    response = response.substring(strlen(RSP_VERSION));
+    response = response.substring(strlen(RSP_READ_GROUP));
     char* token = strtok((char*)response.c_str(),",");
     if(token != 0)
     { // GBW
-      result.bandwidth = atof(token);
+      //Serial.printf("GBW : %s",token);
+      result.bandwidth = atoi(token);
       token = strtok(0,",");
       if(token != 0)
-      { //
-
+      { // TFV
+        //Serial.printf("TFV : %s",token);
+        result.freq_tx = atof(token);
+        token = strtok(0,",");
+        if(token != 0)
+        { // RFV
+          //Serial.printf("RFV : %s",token);
+          result.freq_rx = atof(token);
+          token = strtok(0,",");
+          if(token != 0)
+          { // Tx_CXCSS
+            //Serial.printf("Tx CXCSS : %s",token);
+            result.ctcss_tx = atoi(token);
+            token = strtok(0,",");
+            if(token != 0)
+            { // SQ
+              //Serial.printf("SQ : %s",token);
+              result.squelch = atoi(token);
+              token = strtok(0,",");
+              if(token != 0)
+              { // Rx_CXCSS
+                //Serial.printf("Rx CXCSS : %s",token);
+                result.ctcss_rx = atoi(token);
+                token = strtok(0,",");
+              }
+            }
+          }
+        }
       }
     }
-
   }
   return result;
+}
+
+String DRA818::Parameters::toString()
+{
+  char buffer[128];
+  sprintf(buffer, "Parametrs[GBW=%d,TFV=%3.4fMHz,RFV=%3.4fMHz,SQ=%d,Tx_CXCSS=%03d,Rx_CXCSS=%03d]",this->bandwidth,this->freq_tx,this->freq_rx,this->squelch,this->ctcss_tx,this->ctcss_rx);
+  return String(buffer);
 }
 
 int DRA818::volume(uint8_t volume) {

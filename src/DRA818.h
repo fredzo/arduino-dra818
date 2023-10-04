@@ -59,12 +59,13 @@ class DRA818 {
         // Parameters subclass
         class Parameters {
             public :
-                uint8_t bandwidth;
-                float freq_tx;
-                float freq_rx;
-                uint8_t ctcss_tx;
-                uint8_t squelch;
-                uint8_t ctcss_rx;
+                uint8_t bandwidth = 0;
+                float freq_tx = 0;
+                float freq_rx = 0;
+                uint16_t ctcss_tx = 0;
+                uint8_t squelch = 0;
+                uint16_t ctcss_rx = 0;
+                String toString();
         };
 
         // Constructors

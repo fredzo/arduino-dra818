@@ -56,7 +56,7 @@ void dra818SimuWrite(char character)
         }
         else if (commandString.startsWith("AT+DMOREADGROUP"))
         {
-            strcpy(responseBuffer,"+DMOREADGROUP:0,433.5000,433.5000,0000,1,0000\r\n");
+            strcpy(responseBuffer,"+DMOREADGROUP:0,433.5000,433.5000,0123,3,0456\r\n");
         }
         else if (commandString.startsWith("AT+VERSION"))
         {
