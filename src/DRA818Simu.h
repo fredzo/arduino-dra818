@@ -5,6 +5,8 @@
 
 #define RESPONSE_DELAY      300 // Simulate a 300ms response time from the DRA module
 
+#define SCAN_BUSY_PERIOD    4000
+
 #define COMMAND_SET_GROUP   "AT+DMOSETGROUP="
 #define COMMAND_SCAN        "S+"
 
@@ -13,6 +15,7 @@
 char commandBuffer[64];
 int commandBufferIndex = 0;
 unsigned long commandTime;
+unsigned long lastScanBusyTime;
 char responseStack[RESPONSE_STACK_SIZE][64];
 int responseStackWriteIndex = 0;
 int responsetackReadIndex = 0;
@@ -38,15 +41,19 @@ void dra818SimuWrite(char character)
         else if (commandString.startsWith(COMMAND_SCAN))
         {
             commandString = commandString.substring(strlen(COMMAND_SCAN));
-            // Parse frequency value
-            float frequency = atof(commandString.c_str());
             bool busy = false;
-            for(int i = 0 ; i < BUSYS_FREQ_NUMBER ; i++)
-            {
-                if(frequency == busyFrequencies[i])
+            if((commandTime - lastScanBusyTime)>SCAN_BUSY_PERIOD)
+            {   
+                lastScanBusyTime = commandTime;
+                // Parse frequency value
+                float frequency = atof(commandString.c_str());
+                for(int i = 0 ; i < BUSYS_FREQ_NUMBER ; i++)
                 {
-                    busy = true;
-                    break;
+                    if(frequency == busyFrequencies[i])
+                    {
+                        busy = true;
+                        break;
+                    }
                 }
             }
             sprintf(responseBuffer,"S=%d\r\n", busy ? 0 : 1);
