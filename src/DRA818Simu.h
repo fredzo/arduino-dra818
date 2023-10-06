@@ -3,7 +3,7 @@
 
 #include <DRA818.h>
 
-#define RESPONSE_DELAY      300 // Simulate a 300ms response time from the DRA module
+#define RESPONSE_DELAY      100 // Simulate a 100ms response time from the DRA module
 
 #define SCAN_BUSY_PERIOD    4000
 
@@ -15,7 +15,6 @@
 char commandBuffer[64];
 int commandBufferIndex = 0;
 unsigned long commandTime;
-unsigned long lastScanBusyTime;
 char responseStack[RESPONSE_STACK_SIZE][64];
 int responseStackWriteIndex = 0;
 int responsetackReadIndex = 0;
@@ -25,6 +24,9 @@ int rssiValues[] = {0,32,64,96,128,160,192,224,255};
 DRA818::Parameters parameters;
 float busyFrequencies[] = {433.0,406.025,406.037,406.049};
 #define BUSYS_FREQ_NUMBER 4
+#define SCAN_BUSY_COUNTDOWN_MIN     10
+#define SCAN_BUSY_COUNTDOWN_MAX     20
+int scanBusyCountdouwn = SCAN_BUSY_COUNTDOWN_MAX;
 
 void dra818SimuWrite(char character)
 {
@@ -40,21 +42,25 @@ void dra818SimuWrite(char character)
         }
         else if (commandString.startsWith(COMMAND_SCAN))
         {
-            commandString = commandString.substring(strlen(COMMAND_SCAN));
             bool busy = false;
-            if((commandTime - lastScanBusyTime)>SCAN_BUSY_PERIOD)
-            {   
-                lastScanBusyTime = commandTime;
-                // Parse frequency value
-                float frequency = atof(commandString.c_str());
-                for(int i = 0 ; i < BUSYS_FREQ_NUMBER ; i++)
+            // Parse frequency value
+            commandString = commandString.substring(strlen(COMMAND_SCAN));
+            float frequency = atof(commandString.c_str());
+            for(int i = 0 ; i < BUSYS_FREQ_NUMBER ; i++)
+            {
+                if(frequency == busyFrequencies[i])
                 {
-                    if(frequency == busyFrequencies[i])
-                    {
+                    if(scanBusyCountdouwn == 0)
+                    {   
+                        scanBusyCountdouwn = random(SCAN_BUSY_COUNTDOWN_MIN,SCAN_BUSY_COUNTDOWN_MAX);
                         busy = true;
-                        break;
                     }
-                }
+                    else
+                    {
+                        scanBusyCountdouwn--;
+                    }
+                    break;
+                }   
             }
             sprintf(responseBuffer,"S=%d\r\n", busy ? 0 : 1);
         }

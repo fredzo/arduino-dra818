@@ -27,6 +27,11 @@
 #include <SoftwareSerial.h>
 #endif
 
+// Activation directives for DEBUG and SIMU modes
+//#define DRA818_DEBUG
+#define DRA818_SIMU
+
+
 // Return codes
 #define DRA818_RET_OK     1
 #define DRA818_RET_KO     0
@@ -57,8 +62,6 @@
 #define SA8X8_UHF_MAX     480.0
 #define DRA818_12K5       0x0
 #define DRA818_25K        0x1
-#define DRA818_DEBUG
-#define DRA818_SIMU
 
 #define RSP_BUFFER_SIZE   64
 
