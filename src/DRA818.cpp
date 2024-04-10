@@ -56,7 +56,7 @@
       })
     #define READ() ({int retval; \
       retval=dra818SimuRead(); \
-      /*if (this->log) this->log->write(retval);*/  \
+      if (this->log) this->log->write(retval);  \
       retval;})
   #else
     #define LOG(action, msg)
@@ -124,7 +124,7 @@ int DRA818::read_response() {
       ack[0] = ack[1];
       ack[1] = ack[2];
       ack[2] = READ();
-      LOG(write, ack[2]);
+      //LOG(write, ack[2]);
     }
   } while (ack[2] != 0xa && (millis() - start) < TIMEOUT);
 #ifdef DRA818_DEBUG
@@ -148,7 +148,7 @@ String DRA818::read_string_response() {
     if (AVAILABLE()) {
       curChar = READ();
       buffer[bufferIndex] = curChar;
-      LOG(write, curChar);
+      //LOG(write, curChar);
       bufferIndex++;
     }
   } while ((curChar != 0xa) && ((millis() - start) < TIMEOUT) && (bufferIndex<RSP_BUFFER_SIZE));
@@ -255,7 +255,7 @@ DRA818::Parameters DRA818::read_group() {
 String DRA818::Parameters::toString()
 {
   char buffer[128];
-  sprintf(buffer, "Parametrs[GBW=%d,TFV=%3.4fMHz,RFV=%3.4fMHz,SQ=%d,Tx_CXCSS=%03d,Rx_CXCSS=%03d]",this->bandwidth,this->freq_tx,this->freq_rx,this->squelch,this->ctcss_tx,this->ctcss_rx);
+  sprintf(buffer, "Parameters[GBW=%d,TFV=%3.4fMHz,RFV=%3.4fMHz,SQ=%d,Tx_CXCSS=%03d,Rx_CXCSS=%03d]",this->bandwidth,this->freq_tx,this->freq_rx,this->squelch,this->ctcss_tx,this->ctcss_rx);
   return String(buffer);
 }
 
@@ -529,7 +529,7 @@ void DRA818::async_task()
   while(AVAILABLE()) {
     char curChar = READ();
     responseBuffer[responseBufferIndex] = curChar;
-    LOG(write, curChar);
+    //LOG(write, curChar);
     responseBufferIndex++;
     if(responseBufferIndex>=RSP_BUFFER_SIZE) {
       // Buffer full => overwrite last char 
@@ -567,7 +567,7 @@ void DRA818::async_task()
           (*volume_cb)(responseString.charAt(14) == '0');
         }
       }
-      else if (responseString.startsWith("RSSI:"))
+      else if (responseString.startsWith("RSSI=")||responseString.startsWith("RSSI:"))
       {
         if(rssi_cb) {
           // Parse RSSI value
@@ -606,7 +606,8 @@ void DRA818::async_task()
       else
       {
         LOG(print, F("Unknown response '"));
-        LOG(print, responseString.c_str());
+        responseString.trim();
+        LOG(print,responseString.c_str());
         LOG(println, F("'"));
       }
       responseBufferIndex = 0;
