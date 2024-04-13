@@ -47,6 +47,8 @@
 
 #define CHECK(a, op, b) if (a op b) a = b
 
+#define CHAR_TO_INT(a) a - '0'
+
 #ifdef DRA818_SIMU
   #ifdef DRA818_DEBUG
     #define LOG(action, msg) if (this->log) this->log->action(msg)
@@ -136,6 +138,27 @@ int DRA818::read_response() {
   return (ack[0] == '0');
 }
 
+int DRA818::process_scan_response(int readResponse) {
+  //Serial.printf("Process scan with duration = %d.", millis()-scanStartTime);
+  if(readResponse == 0)
+  {
+    return readResponse;
+  }
+  else
+  { // Scan function does not return 0 when frequency is busy but rather stops for more thant 500 ms
+    // Let's use a response time based busy detection
+    if(millis()-scanStartTime >= DRA818_SCAN_TIME_THRESHOLD)
+    {
+      return 0;
+    }
+    else
+    {
+      return readResponse;
+    }
+  }
+}
+
+
 String DRA818::read_string_response() {
   char buffer[RSP_BUFFER_SIZE];
   int bufferIndex = 0;
@@ -186,7 +209,7 @@ int DRA818::handshake() {
 
 int DRA818::scan(float freq) {
   send_scan(freq);
-  return read_response();
+  return process_scan_response(read_response());
 }
 
 int DRA818::tail(bool tail) {
@@ -308,6 +331,7 @@ bool DRA818::send_handshake() {
 }
 
 bool DRA818::send_scan(float freq) {
+  scanStartTime = millis();
   char buf[9];
 
   dtostrf(freq, 8, 4, buf);
@@ -543,28 +567,10 @@ void DRA818::async_task()
       #endif
       responseBuffer[responseBufferIndex] = 0; // String termination
       String responseString = String(responseBuffer);
-      if(responseString.startsWith("+DMOCONNECT:"))
-      { // handshake
-        if(handshake_cb) {
-          (*handshake_cb)(responseString.charAt(12) == '0');
-        }
-      }
-      else if (responseString.startsWith("S="))
+      if (responseString.startsWith("S="))
       { // Scan
         if(scan_cb) {
-          (*scan_cb)(responseString.charAt(2) == '0');
-        }
-      }
-      else if (responseString.startsWith("+DMOSETGROUP:"))
-      {
-        if(group_cb) {
-          (*group_cb)(responseString.charAt(13) == '0');
-        }
-      }
-      else if (responseString.startsWith("+DMOSETVOLUME:"))
-      {
-        if(volume_cb) {
-          (*volume_cb)(responseString.charAt(14) == '0');
+          (*scan_cb)(process_scan_response(CHAR_TO_INT(responseString.charAt(2))));
         }
       }
       else if (responseString.startsWith("RSSI=")||responseString.startsWith("RSSI:"))
@@ -575,16 +581,34 @@ void DRA818::async_task()
           (*rssi_cb)(atoi(responseString.c_str()));
         }
       }
+      else if(responseString.startsWith("+DMOCONNECT:"))
+      { // handshake
+        if(handshake_cb) {
+          (*handshake_cb)(CHAR_TO_INT(responseString.charAt(12)));
+        }
+      }
+      else if (responseString.startsWith("+DMOSETGROUP:"))
+      {
+        if(group_cb) {
+          (*group_cb)(CHAR_TO_INT(responseString.charAt(13)));
+        }
+      }
+      else if (responseString.startsWith("+DMOSETVOLUME:"))
+      {
+        if(volume_cb) {
+          (*volume_cb)(CHAR_TO_INT(responseString.charAt(14)));
+        }
+      }
       else if (responseString.startsWith("+DMOSETFILTER:"))
       {
         if(filters_cb) {
-          (*filters_cb)(responseString.charAt(14) == '0');
+          (*filters_cb)(CHAR_TO_INT(responseString.charAt(14)));
         }
       }
       else if (responseString.startsWith("+DMOSETTAIL:"))
       {
         if(tail_cb) {
-          (*tail_cb)(responseString.charAt(12) == '0');
+          (*tail_cb)(CHAR_TO_INT(responseString.charAt(12)));
         }
       }
       else if (responseString.startsWith("+DMOREADGROUP:"))

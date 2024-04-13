@@ -63,6 +63,10 @@
 #define DRA818_12K5       0x0
 #define DRA818_25K        0x1
 
+// Scan function does not return 0 when frequency is busy but rather stops for more thant 500 ms
+// Let's use a response time based busy detection
+#define DRA818_SCAN_TIME_THRESHOLD  500
+
 #define RSP_BUFFER_SIZE   64
 
 class DRA818 {
@@ -158,6 +162,9 @@ class DRA818 {
         char responseBuffer[RSP_BUFFER_SIZE];
         int responseBufferIndex = 0;
 
+        // Scan command start time
+        unsigned long scanStartTime = 0;
+
         // low level DRA818 function
         bool send_group(uint8_t bandwidth, float freq_tx, float freq_rx, uint8_t ctcss_tx, uint8_t squelch, uint8_t ctcss_rx);
         bool send_handshake();
@@ -171,6 +178,8 @@ class DRA818 {
 
 
         int read_response();
+
+        int process_scan_response(int readResponse);
 
         String read_string_response();
 
