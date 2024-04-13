@@ -28,7 +28,7 @@
 #endif
 
 // Activation directives for DEBUG and SIMU modes
-#define DRA818_DEBUG
+//#define DRA818_DEBUG
 //#define DRA818_SIMU
 
 
